@@ -1,0 +1,589 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "CVision API",
+    "description": "Complete API documentation for CVision - CV Builder SaaS",
+    "version": "1.0.0",
+    "contact": {
+      "name": "CVision Support",
+      "email": "api-support@cvision.io"
+    },
+    "license": {
+      "name": "MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000",
+      "description": "Development server"
+    },
+    {
+      "url": "https://api.cvision.io",
+      "description": "Production server"
+    }
+  ],
+  "paths": {
+    "/api/auth/signup": {
+      "post": {
+        "summary": "Create a new user account",
+        "tags": ["Authentication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "user@example.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 8,
+                    "example": "SecurePassword123"
+                  }
+                },
+                "required": ["email", "password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Account created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": {
+                      "$ref": "#/components/schemas/User"
+                    },
+                    "token": {
+                      "type": "string",
+                      "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "User already exists or invalid input"
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "summary": "User login",
+        "tags": ["Authentication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
+                },
+                "required": ["email", "password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": {
+                      "$ref": "#/components/schemas/User"
+                    },
+                    "token": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials"
+          }
+        }
+      }
+    },
+    "/api/cv/save": {
+      "post": {
+        "summary": "Save a new CV",
+        "tags": ["CVs"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "cv": {
+                    "$ref": "#/components/schemas/CV"
+                  },
+                  "templateId": {
+                    "type": "string",
+                    "example": "T2"
+                  },
+                  "name": {
+                    "type": "string",
+                    "example": "My Professional CV"
+                  }
+                },
+                "required": ["cv"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "CV saved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "cv": {
+                      "$ref": "#/components/schemas/SavedCV"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/cv/list": {
+      "get": {
+        "summary": "List all user CVs",
+        "tags": ["CVs"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of CVs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "cvs": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SavedCV"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/cv/{id}": {
+      "get": {
+        "summary": "Get a specific CV",
+        "tags": ["CVs"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "CV details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "cv": {
+                      "$ref": "#/components/schemas/SavedCV"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "CV not found"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a CV",
+        "tags": ["CVs"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "CV deleted successfully"
+          },
+          "404": {
+            "description": "CV not found"
+          }
+        }
+      }
+    },
+    "/api/checkout": {
+      "post": {
+        "summary": "Create Stripe checkout session",
+        "tags": ["Payments"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "plan": {
+                    "type": "string",
+                    "enum": ["pro", "premium", "lifetime"],
+                    "example": "pro"
+                  },
+                  "promoCode": {
+                    "type": "string",
+                    "example": "EXIT30"
+                  }
+                },
+                "required": ["plan"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Checkout session created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sessionId": {
+                      "type": "string",
+                      "example": "cs_test_xxxxx"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/admin/stats": {
+      "get": {
+        "summary": "Get admin statistics",
+        "tags": ["Admin"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Admin stats",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "totalUsers": {
+                      "type": "integer",
+                      "example": 1247
+                    },
+                    "totalCVs": {
+                      "type": "integer",
+                      "example": 3891
+                    },
+                    "totalRevenue": {
+                      "type": "number",
+                      "example": 7340.50
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin access required"
+          }
+        }
+      }
+    },
+    "/api/admin/users": {
+      "get": {
+        "summary": "List all users",
+        "tags": ["Admin"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of users",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "users": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/User"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/ban-user/{userId}": {
+      "post": {
+        "summary": "Ban a user",
+        "tags": ["Admin"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User banned successfully"
+          }
+        }
+      }
+    },
+    "/api/admin/change-plan/{userId}": {
+      "post": {
+        "summary": "Change user plan",
+        "tags": ["Admin"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "plan": {
+                    "type": "string",
+                    "enum": ["free", "pro", "premium", "lifetime"]
+                  }
+                },
+                "required": ["plan"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Plan changed successfully"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "plan": {
+            "type": "string",
+            "enum": ["free", "pro", "premium", "lifetime"]
+          },
+          "isAdmin": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CV": {
+        "type": "object",
+        "properties": {
+          "personal": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "title": { "type": "string" },
+              "email": { "type": "string" },
+              "phone": { "type": "string" },
+              "location": { "type": "string" },
+              "linkedin": { "type": "string" },
+              "summary": { "type": "string" }
+            }
+          },
+          "experience": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "integer" },
+                "company": { "type": "string" },
+                "role": { "type": "string" },
+                "startDate": { "type": "string", "format": "date" },
+                "endDate": { "type": "string", "format": "date" },
+                "description": { "type": "string" }
+              }
+            }
+          },
+          "education": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "integer" },
+                "school": { "type": "string" },
+                "degree": { "type": "string" },
+                "year": { "type": "string", "format": "date" }
+              }
+            }
+          },
+          "skills": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "languages": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "certifications": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      },
+      "SavedCV": {
+        "allOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": { "type": "integer" },
+              "user_id": { "type": "integer" },
+              "name": { "type": "string" },
+              "template_id": { "type": "string" },
+              "ats_score": { "type": "integer" },
+              "created_at": { "type": "string", "format": "date-time" },
+              "updated_at": { "type": "string", "format": "date-time" }
+            }
+          },
+          {
+            "$ref": "#/components/schemas/CV"
+          }
+        ]
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT token from /auth/login or /auth/signup"
+      }
+    }
+  }
+}

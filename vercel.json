@@ -1,0 +1,23 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "npm install",
+  "framework": "vite",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://api.cvision.io/api/:path*"
+    }
+  ],
+  "env": {
+    "VITE_ANTHROPIC_API_KEY": "@anthropic_api_key",
+    "VITE_STRIPE_PUBLIC_KEY": "@stripe_public_key",
+    "VITE_API_URL": "@api_url"
+  },
+  "regions": ["sfo1"],
+  "functions": {
+    "api/**/*.js": {
+      "maxDuration": 60
+    }
+  }
+}
