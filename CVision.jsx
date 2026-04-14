@@ -139,18 +139,18 @@ const useW = () => {
 // FIX: Added proper API key header and error handling
 const callClaude = async (prompt) => {
   try {
-    const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      console.warn('No API key found, using mock mode');
-      return null;
-    }
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('/api/claude', {   // ← must be '/api/claude'
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
-      },
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt }),
+    });
+    const data = await response.json();
+    return data.content[0]?.text || '';
+  } catch (e) {
+    console.error('Claude API call failed:', e);
+    return null;
+  }
+};
       body: JSON.stringify({
         model: 'claude-3-sonnet-20240229',
         max_tokens: 2500,
