@@ -454,7 +454,7 @@ const Auth = ({ nav, onLogin }) => {
           {mode === 'signup' ? 'Create Account' : 'Sign In'}
         </Btn>
 
-        <div style={{ textAlign: 'center', fontSize: '14px', color: COLORS.muted' }}>
+        <div style={{ textAlign: 'center', fontSize: '14px', color: COLORS.muted }}>
           {mode === 'signup' ? 'Already have an account?' : 'Need an account?'}{' '}
           <span onClick={() => setMode(mode === 'signup' ? 'login' : 'signup')} style={{ color: COLORS.gold, cursor: 'pointer', fontWeight: '600' }}>
             {mode === 'signup' ? 'Sign In' : 'Sign Up'}
