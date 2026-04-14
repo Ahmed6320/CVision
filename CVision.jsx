@@ -1059,7 +1059,7 @@ const Admin = ({ user }) => {
               <Card key={i} style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <div style={{ color: COLORS.text, fontWeight: '600' }}>{u.name}</div>
-                  <div style={{ fontSize: '12px', color: COLORS.muted' }}>{u.email} • {u.cvs} CVs</div>
+                  <div style={{ fontSize: '12px', color: COLORS.muted }}>{u.email} • {u.cvs} CVs</div>
                 </div>
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                   <Bdg c={COLORS.blue}>{u.plan.toUpperCase()}</Bdg>
