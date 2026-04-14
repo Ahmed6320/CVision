@@ -506,7 +506,7 @@ const Dashboard = ({ nav, user }) => {
 
         {/* Saved CVs */}
         <div>
-          <h2 style={{ fontSize: '18px', fontWeight: '700', color: COLORS.text', marginBottom: '16px' }}>Your CVs</h2>
+          <h2 style={{ fontSize: '18px', fontWeight: '700', color: COLORS.text, marginBottom: '16px' }}>Your CVs</h2>
           <div style={{ display: 'grid', gap: '16px' }}>
             {savedCVs.map((cv) => (
               <Card key={cv.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', transition: 'all 0.3s' }}>
