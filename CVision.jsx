@@ -136,21 +136,34 @@ const useW = () => {
   return { mob: w < 640, tab: w < 1024, w };
 };
 
+// FIX: Added proper API key header and error handling
 const callClaude = async (prompt) => {
   try {
-    const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY || 'sk-mock';
+    const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
+    if (!apiKey) {
+      console.warn('No API key found, using mock mode');
+      return null;
+    }
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-3-sonnet-20240229',
         max_tokens: 2500,
         messages: [{ role: 'user', content: prompt }],
       }),
     });
+    if (!response.ok) {
+      throw new Error(`Claude API error: ${response.status}`);
+    }
     const data = await response.json();
     return data.content[0]?.text || '';
   } catch (e) {
+    console.error('Claude API call failed:', e);
     return null;
   }
 };
@@ -180,9 +193,11 @@ const Btn = ({ v = 'primary', disabled, full, style, onClick, children, classNam
     green: { background: COLORS.green, color: COLORS.bg },
   };
 
+  const variantStyle = variants[v] || variants.primary; // FIX: fallback to primary
+
   return (
     <button
-      style={{ ...baseStyle, ...variants[v], opacity: disabled ? 0.5 : 1 }}
+      style={{ ...baseStyle, ...variantStyle, opacity: disabled ? 0.5 : 1 }}
       onClick={onClick}
       disabled={disabled}
       className={className}
@@ -251,11 +266,16 @@ const Inp = ({ label, value, onChange, placeholder, type = 'text', rows, style }
   </div>
 );
 
-const Bdg = ({ c = COLORS.gold, children }) => (
-  <span style={{ display: 'inline-block', background: c, color: COLORS.bg === c ? COLORS.text : COLORS.bg, padding: '4px 12px', borderRadius: '16px', fontSize: '12px', fontWeight: '600' }}>
-    {children}
-  </span>
-);
+// FIX: Improved contrast logic - always use gold text on dark background or white on gold
+const Bdg = ({ c = COLORS.gold, children }) => {
+  const isDarkBg = c === COLORS.gold || c === COLORS.blue || c === COLORS.purple || c === COLORS.red || c === COLORS.green;
+  const textColor = isDarkBg ? COLORS.bg : COLORS.text;
+  return (
+    <span style={{ display: 'inline-block', background: c, color: textColor, padding: '4px 12px', borderRadius: '16px', fontSize: '12px', fontWeight: '600' }}>
+      {children}
+    </span>
+  );
+};
 
 const Logo = ({ size = 22 }) => (
   <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', fontFamily: 'Cormorant Garamond', fontSize: size, fontWeight: '700' }}>
@@ -333,7 +353,7 @@ const Landing = ({ nav, user }) => {
         <h2 style={{ fontFamily: 'Cormorant Garamond', fontSize: mob ? '36px' : '48px', marginBottom: '60px', color: COLORS.text, textAlign: 'center' }}>Professional Templates</h2>
         <div style={{ display: 'grid', gridTemplateColumns: mob ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '24px' }}>
           {TEMPLATES.slice(0, 8).map((t, i) => (
-            <div key={i} style={{ animation: `fadeUp 0.6s ease-out ${i * 0.05}s both` }}>
+            <div key={t.id} style={{ animation: `fadeUp 0.6s ease-out ${i * 0.05}s both` }}>
               <Card style={{ background: t.color, height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'transform 0.3s' }}>
                 <div style={{ color: '#fff', fontSize: '18px', fontWeight: '600' }}>{t.name}</div>
               </Card>
@@ -541,7 +561,7 @@ const Templates = ({ nav, user, onSelectTemplate }) => {
           {TEMPLATES.map((t, i) => {
             const isLocked = PF(t.plan).price > userPlan.price;
             return (
-              <div key={i} style={{ position: 'relative', animation: `fadeUp 0.6s ease-out ${i * 0.03}s both` }}>
+              <div key={t.id} style={{ position: 'relative', animation: `fadeUp 0.6s ease-out ${i * 0.03}s both` }}>
                 <div
                   onClick={() => !isLocked && (onSelectTemplate(t), nav('builder'))}
                   style={{
@@ -614,6 +634,7 @@ const Builder = ({ nav, user, cv, setCv, selectedTemplate }) => {
                   const data = JSON.parse(result.replace(/```json|```/g, ''));
                   setCv(data);
                 } catch (e) {
+                  console.error('Failed to parse AI response', e);
                   setCv({ ...BLANK_CV, personal: { ...BLANK_CV.personal, summary: 'Generated CV content' } });
                 }
               }
@@ -642,7 +663,7 @@ const Builder = ({ nav, user, cv, setCv, selectedTemplate }) => {
           <div>
             <h2 style={{ fontSize: '24px', fontWeight: '700', color: COLORS.text, marginBottom: '24px' }}>Experience</h2>
             {cv.experience.map((exp, i) => (
-              <div key={i} style={{ marginBottom: '24px', padding: '16px', background: COLORS.card2, borderRadius: '8px' }}>
+              <div key={exp.id} style={{ marginBottom: '24px', padding: '16px', background: COLORS.card2, borderRadius: '8px' }}>
                 <Inp label={`Company ${i + 1}`} value={exp.company} onChange={(v) => {
                   const newExp = [...cv.experience];
                   newExp[i].company = v;
@@ -685,7 +706,7 @@ const Builder = ({ nav, user, cv, setCv, selectedTemplate }) => {
           <div>
             <h2 style={{ fontSize: '24px', fontWeight: '700', color: COLORS.text, marginBottom: '24px' }}>Education</h2>
             {cv.education.map((edu, i) => (
-              <div key={i} style={{ marginBottom: '24px', padding: '16px', background: COLORS.card2, borderRadius: '8px' }}>
+              <div key={edu.id} style={{ marginBottom: '24px', padding: '16px', background: COLORS.card2, borderRadius: '8px' }}>
                 <Inp label="School/University" value={edu.school} onChange={(v) => {
                   const newEdu = [...cv.education];
                   newEdu[i].school = v;
@@ -766,7 +787,7 @@ const Builder = ({ nav, user, cv, setCv, selectedTemplate }) => {
             <div style={{ marginBottom: '24px' }}>
               <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', overflowX: 'auto', paddingBottom: '8px' }}>
                 {steps.map((s, i) => (
-                  <Btn key={i} v={step === i ? 'primary' : 'dark'} onClick={() => setStep(i)} style={{ whiteSpace: 'nowrap' }}>
+                  <Btn key={s.id} v={step === i ? 'primary' : 'dark'} onClick={() => setStep(i)} style={{ whiteSpace: 'nowrap' }}>
                     {i + 1}. {s.title}
                   </Btn>
                 ))}
@@ -785,7 +806,7 @@ const Builder = ({ nav, user, cv, setCv, selectedTemplate }) => {
           <div style={{ padding: '40px', overflowY: 'auto', background: COLORS.bg }}>
             <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
               {steps.map((s, i) => (
-                <Btn key={i} v={step === i ? 'primary' : 'dark'} onClick={() => setStep(i)} style={{ whiteSpace: 'nowrap' }}>
+                <Btn key={s.id} v={step === i ? 'primary' : 'dark'} onClick={() => setStep(i)} style={{ whiteSpace: 'nowrap' }}>
                   {i + 1}
                 </Btn>
               ))}
@@ -832,7 +853,7 @@ const TemplatePreview = ({ cv, color, dark }) => (
       <div style={{ marginBottom: '20px' }}>
         <div style={{ fontSize: '11px', fontWeight: '700', color: color, textTransform: 'uppercase', marginBottom: '8px' }}>Experience</div>
         {cv.experience.map((exp, i) => (
-          <div key={i} style={{ marginBottom: '12px', paddingBottom: '12px', borderBottom: i < cv.experience.length - 1 ? `1px solid ${dark ? '#1C1C2E' : '#e0e0e0'}` : 'none' }}>
+          <div key={exp.id} style={{ marginBottom: '12px', paddingBottom: '12px', borderBottom: i < cv.experience.length - 1 ? `1px solid ${dark ? '#1C1C2E' : '#e0e0e0'}` : 'none' }}>
             <div style={{ fontWeight: '700', marginBottom: '2px' }}>{exp.role || 'Job Title'}</div>
             <div style={{ fontSize: '12px', opacity: 0.8, marginBottom: '4px' }}>{exp.company || 'Company'} {exp.startDate && `(${exp.startDate})`}</div>
             {exp.description && <div style={{ fontSize: '12px', opacity: 0.8 }}>{exp.description}</div>}
@@ -845,7 +866,7 @@ const TemplatePreview = ({ cv, color, dark }) => (
       <div style={{ marginBottom: '20px' }}>
         <div style={{ fontSize: '11px', fontWeight: '700', color: color, textTransform: 'uppercase', marginBottom: '8px' }}>Education</div>
         {cv.education.map((edu, i) => (
-          <div key={i} style={{ marginBottom: '12px' }}>
+          <div key={edu.id} style={{ marginBottom: '12px' }}>
             <div style={{ fontWeight: '700', marginBottom: '2px' }}>{edu.degree || 'Degree'}</div>
             <div style={{ fontSize: '12px', opacity: 0.8 }}>{edu.school || 'School'} {edu.year && `(${edu.year})`}</div>
           </div>
@@ -874,7 +895,16 @@ const AITools = ({ nav, user, cv }) => {
     setLoading(true);
     const prompt = `Analyze this CV data and return ONLY valid JSON: ${JSON.stringify(cv)}. Return: {score: number 0-100, ats_score: number 0-100, grade: "A"|"B"|"C"|"D", issues: string[], strengths: string[], suggestions: string[], quick_wins: string[]}`;
     const res = await callClaude(prompt);
-    setResult(res ? JSON.parse(res.replace(/```json|```/g, '')) : { score: 82, ats_score: 78, grade: 'A', issues: [], strengths: ['Clear format', 'Good structure'], suggestions: ['Add more metrics'], quick_wins: ['Quantify achievements'] });
+    if (res) {
+      try {
+        const parsed = JSON.parse(res.replace(/```json|```/g, ''));
+        setResult(parsed);
+      } catch (e) {
+        setResult({ score: 82, ats_score: 78, grade: 'A', issues: [], strengths: ['Clear format', 'Good structure'], suggestions: ['Add more metrics'], quick_wins: ['Quantify achievements'] });
+      }
+    } else {
+      setResult({ score: 82, ats_score: 78, grade: 'A', issues: [], strengths: ['Clear format', 'Good structure'], suggestions: ['Add more metrics'], quick_wins: ['Quantify achievements'] });
+    }
     setLoading(false);
   };
 
@@ -883,7 +913,16 @@ const AITools = ({ nav, user, cv }) => {
     setLoading(true);
     const prompt = `Compare this CV: ${JSON.stringify(cv)} to this job: ${jobDesc}. Return ONLY JSON: {match_score: number 0-100, missing_keywords: string[], matching_keywords: string[], recommendations: string[]}`;
     const res = await callClaude(prompt);
-    setResult(res ? JSON.parse(res.replace(/```json|```/g, '')) : { match_score: 85, missing_keywords: ['Machine Learning'], matching_keywords: ['React', 'Node.js'], recommendations: ['Add ML experience'] });
+    if (res) {
+      try {
+        const parsed = JSON.parse(res.replace(/```json|```/g, ''));
+        setResult(parsed);
+      } catch (e) {
+        setResult({ match_score: 85, missing_keywords: ['Machine Learning'], matching_keywords: ['React', 'Node.js'], recommendations: ['Add ML experience'] });
+      }
+    } else {
+      setResult({ match_score: 85, missing_keywords: ['Machine Learning'], matching_keywords: ['React', 'Node.js'], recommendations: ['Add ML experience'] });
+    }
     setLoading(false);
   };
 
@@ -1056,7 +1095,7 @@ const Admin = ({ user }) => {
         {tab === 'users' && (
           <div>
             {ADMIN_USERS.map((u, i) => (
-              <Card key={i} style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Card key={u.id} style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <div style={{ color: COLORS.text, fontWeight: '600' }}>{u.name}</div>
                   <div style={{ fontSize: '12px', color: COLORS.muted }}>{u.email} • {u.cvs} CVs</div>
@@ -1094,7 +1133,7 @@ const Admin = ({ user }) => {
         {tab === 'promos' && (
           <div>
             {Object.entries(PROMO_CODES).map(([code, data], i) => (
-              <Card key={i} style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Card key={code} style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <div style={{ color: COLORS.text, fontWeight: '600', fontSize: '18px' }}>{code}</div>
                   <div style={{ fontSize: '12px', color: COLORS.muted }}>{(data.discount * 100).toFixed(0)}% off • {data.plans.join(', ').toUpperCase()}</div>
@@ -1110,14 +1149,26 @@ const Admin = ({ user }) => {
 };
 
 // CHECKOUT SCREEN
-const Checkout = ({ nav, user, selectedPlan = 'pro' }) => {
+const Checkout = ({ nav, user, selectedPlan = 'pro', appliedPromo = null, onApplyPromo }) => {
   const { mob } = useW();
-  const [promo, setPromo] = useState('');
+  const [promo, setPromo] = useState(appliedPromo || '');
   const plan = PLANS[selectedPlan];
   let final = plan.price;
-  if (promo && PROMO_CODES[promo]) {
+  let isValidPromo = false;
+  if (promo && PROMO_CODES[promo] && PROMO_CODES[promo].plans.includes(selectedPlan)) {
     final = plan.price * (1 - PROMO_CODES[promo].discount);
+    isValidPromo = true;
+  } else if (promo && !isValidPromo) {
+    // Invalid or not applicable promo
   }
+
+  const handleApplyPromo = () => {
+    if (promo && PROMO_CODES[promo] && PROMO_CODES[promo].plans.includes(selectedPlan)) {
+      if (onApplyPromo) onApplyPromo(promo);
+    } else {
+      alert('Invalid promo code for this plan');
+    }
+  };
 
   return (
     <div style={{ background: COLORS.bg, minHeight: '100vh', paddingTop: '80px', padding: mob ? '40px 20px' : '80px 40px' }}>
@@ -1133,7 +1184,7 @@ const Checkout = ({ nav, user, selectedPlan = 'pro' }) => {
               </div>
               <div style={{ fontSize: '24px', fontWeight: '700', color: COLORS.gold }}>${plan.price}</div>
             </div>
-            {promo && PROMO_CODES[promo] && (
+            {isValidPromo && (
               <>
                 <div style={{ borderTop: `1px solid ${COLORS.border}`, paddingTop: '16px', marginBottom: '16px' }} />
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: COLORS.green, marginBottom: '16px' }}>
@@ -1150,7 +1201,10 @@ const Checkout = ({ nav, user, selectedPlan = 'pro' }) => {
             </div>
           </div>
 
-          <Inp label="Promo Code" value={promo} onChange={setPromo} placeholder="e.g., EXIT30" />
+          <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
+            <Inp label="Promo Code" value={promo} onChange={setPromo} placeholder="e.g., EXIT30" style={{ flex: 1 }} />
+            <Btn v="dark" onClick={handleApplyPromo} style={{ marginTop: '24px' }}>Apply</Btn>
+          </div>
 
           <div style={{ marginBottom: '24px' }}>
             <label style={{ display: 'block', marginBottom: '8px', color: COLORS.muted, fontSize: '12px', fontWeight: '600', textTransform: 'uppercase' }}>Card Number</label>
@@ -1164,7 +1218,8 @@ const Checkout = ({ nav, user, selectedPlan = 'pro' }) => {
             </div>
             <div>
               <label style={{ display: 'block', marginBottom: '8px', color: COLORS.muted, fontSize: '12px', fontWeight: '600', textTransform: 'uppercase' }}>CVV</label>
-              <input placeholder="***" style={{ width: '100%', padding: '12px', background: COLORS.card2, border: `1px solid ${COLORS.border}`, borderRadius: '8px', color: COLORS.text', fontFamily: 'monospace' }} />
+              {/* FIX: removed stray quote */}
+              <input placeholder="***" style={{ width: '100%', padding: '12px', background: COLORS.card2, border: `1px solid ${COLORS.border}`, borderRadius: '8px', color: COLORS.text, fontFamily: 'monospace' }} />
             </div>
           </div>
 
@@ -1187,12 +1242,17 @@ const Checkout = ({ nav, user, selectedPlan = 'pro' }) => {
 };
 
 // ============================================================================
-// NAVBAR
+// NAVBAR (FIXED: added onLogout prop)
 // ============================================================================
 
-const NavBar = ({ user, nav, screen }) => {
-  const { mob, w } = useW();
+const NavBar = ({ user, nav, screen, onLogout }) => {
+  const { mob } = useW();
   const [openMenu, setOpenMenu] = useState(false);
+
+  const handleSignOut = () => {
+    if (onLogout) onLogout();
+    nav('landing');
+  };
 
   return (
     <div style={{
@@ -1224,7 +1284,7 @@ const NavBar = ({ user, nav, screen }) => {
                     <div onClick={() => { nav('builder'); setOpenMenu(false); }} style={{ padding: '12px 24px', cursor: 'pointer', borderBottom: `1px solid ${COLORS.border}`, color: COLORS.text }}>Builder</div>
                     <div onClick={() => { nav('ai'); setOpenMenu(false); }} style={{ padding: '12px 24px', cursor: 'pointer', borderBottom: `1px solid ${COLORS.border}`, color: COLORS.text }}>AI Tools</div>
                     {user.isAdmin && <div onClick={() => { nav('admin'); setOpenMenu(false); }} style={{ padding: '12px 24px', cursor: 'pointer', borderBottom: `1px solid ${COLORS.border}`, color: COLORS.gold, fontWeight: '700' }}>Admin</div>}
-                    <div onClick={() => { onLogout(); setOpenMenu(false); }} style={{ padding: '12px 24px', cursor: 'pointer', color: COLORS.red }}>Sign Out</div>
+                    <div onClick={() => { handleSignOut(); setOpenMenu(false); }} style={{ padding: '12px 24px', cursor: 'pointer', color: COLORS.red }}>Sign Out</div>
                   </>
                 )}
               </div>
@@ -1246,7 +1306,7 @@ const NavBar = ({ user, nav, screen }) => {
                 <div onClick={() => nav('ai')} style={{ cursor: 'pointer', color: COLORS.text }}>AI Tools</div>
                 {user.isAdmin && <div onClick={() => nav('admin')} style={{ cursor: 'pointer', color: COLORS.gold, fontWeight: '700' }}>Admin</div>}
                 <Bdg c={COLORS.gold}>{user.plan.toUpperCase()}</Bdg>
-                <div onClick={() => { setUser(null); nav('landing'); }} style={{ cursor: 'pointer', color: COLORS.red, fontSize: '12px' }}>Sign Out</div>
+                <div onClick={handleSignOut} style={{ cursor: 'pointer', color: COLORS.red, fontSize: '12px' }}>Sign Out</div>
               </>
             )}
           </div>
@@ -1260,12 +1320,12 @@ const NavBar = ({ user, nav, screen }) => {
 // EXIT MODAL
 // ============================================================================
 
-const ExitModal = ({ onClose, onPromo }) => (
+const ExitModal = ({ onClose, onApplyPromo }) => (
   <div style={{ position: 'fixed', inset: '0', background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9998 }}>
     <Card style={{ maxWidth: '400px', animation: 'slideInUp 0.4s ease-out' }}>
       <h2 style={{ fontSize: '24px', fontWeight: '700', color: COLORS.text, marginBottom: '12px' }}>Wait! Before You Go...</h2>
       <p style={{ color: COLORS.muted, marginBottom: '24px' }}>Get 30% off Pro with code <span style={{ color: COLORS.gold, fontWeight: '700' }}>EXIT30</span></p>
-      <Btn full onClick={() => { onPromo('EXIT30'); onClose(); }} style={{ marginBottom: '12px' }}>Claim Offer</Btn>
+      <Btn full onClick={() => { onApplyPromo('EXIT30'); onClose(); }} style={{ marginBottom: '12px' }}>Claim Offer</Btn>
       <Btn full v="dark" onClick={onClose}>No Thanks</Btn>
     </Card>
   </div>
@@ -1293,6 +1353,7 @@ export default function CVision() {
   const [selectedTemplate, setSelectedTemplate] = useState(TEMPLATES[0]);
   const [exitModalOpen, setExitModalOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState(null);
+  const [promoCode, setPromoCode] = useState(null); // FIX: store promo from exit modal
   const exitModalRef = useRef(false);
 
   useEffect(() => {
@@ -1323,11 +1384,24 @@ export default function CVision() {
 
   const nav = useCallback((s) => setScreen(s), []);
 
+  const handleLogout = useCallback(() => {
+    setUser(null);
+    setPromoCode(null);
+    setCv(BLANK_CV);
+    setSelectedTemplate(TEMPLATES[0]);
+    nav('landing');
+  }, [nav]);
+
+  const handleApplyPromoFromModal = (code) => {
+    setPromoCode(code);
+    nav('checkout');
+  };
+
   return (
     <div style={{ background: COLORS.bg, color: COLORS.text, minHeight: '100vh' }}>
       <style>{CSS}</style>
 
-      <NavBar user={user} nav={nav} screen={screen} />
+      <NavBar user={user} nav={nav} screen={screen} onLogout={handleLogout} />
 
       {screen === 'landing' && <Landing nav={nav} user={user} />}
       {screen === 'pricing' && <Pricing nav={nav} user={user} />}
@@ -1337,9 +1411,9 @@ export default function CVision() {
       {screen === 'builder' && user && <Builder nav={nav} user={user} cv={cv} setCv={setCv} selectedTemplate={selectedTemplate} />}
       {screen === 'ai' && user && <AITools nav={nav} user={user} cv={cv} />}
       {screen === 'admin' && user && <Admin user={user} />}
-      {screen === 'checkout' && user && <Checkout nav={nav} user={user} selectedPlan="pro" />}
+      {screen === 'checkout' && user && <Checkout nav={nav} user={user} selectedPlan="pro" appliedPromo={promoCode} onApplyPromo={setPromoCode} />}
 
-      {exitModalOpen && <ExitModal onClose={() => setExitModalOpen(false)} onPromo={(code) => { alert(`✓ Promo code ${code} applied!`); }} />}
+      {exitModalOpen && <ExitModal onClose={() => setExitModalOpen(false)} onApplyPromo={handleApplyPromoFromModal} />}
 
       {toastMsg && <Toast message={toastMsg} />}
     </div>
